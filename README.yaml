@@ -1,70 +1,107 @@
-name: "template"
-
+name: "aws-sns-topic"
 # Canonical GitHub repo
-github_repo: "cloudposse-terraform-components/template"
-
+github_repo: "cloudposse-terraform-components/aws-sns-topic"
 # Short description of this project
 description: |-
-  Description of this component
+  This component is responsible for provisioning an SNS topic.
 
-usage: |-
-  **Stack Level**: Regional or Test47
+  ## Usage
 
-  Here's an example snippet for how to use this component.
-  
+  **Stack Level**: Regional
+
+  Here are some example snippets for how to use this component:
+
+  `stacks/catalog/sns-topic/defaults.yaml` file (base component for all SNS topics with default settings):
+
   ```yaml
   components:
     terraform:
-      foo:
+      sns-topic/defaults:
+        metadata:
+          type: abstract
+        settings:
+          spacelift:
+            workspace_enabled: true
         vars:
           enabled: true
+          tags:
+            Team: sre
+            Service: sns-topic
+          subscribers: {}
+          allowed_aws_services_for_sns_published: []
+          kms_master_key_id: alias/aws/sns
+          encryption_enabled: true
+          sqs_queue_kms_master_key_id: alias/aws/sqs
+          sqs_queue_kms_data_key_reuse_period_seconds: 300
+          allowed_iam_arns_for_sns_publish: []
+          sns_topic_policy_json: ""
+          sqs_dlq_enabled: false
+          sqs_dlq_max_message_size: 262144
+          sqs_dlq_message_retention_seconds: 1209600
+          delivery_policy: null
+          fifo_topic: false
+          fifo_queue_enabled: false
+          content_based_deduplication: false
+          redrive_policy_max_receiver_count: 5
+          redrive_policy: null
   ```
 
+  ```yaml
+  import:
+    - catalog/sns-topic/defaults
+
+  components:
+    terraform:
+      sns-topic-example:
+        metadata:
+          component: sns-topic
+          inherits:
+            - sns-topic/defaults
+        vars:
+          enabled: true
+          name: sns-topic-example
+          sqs_dlq_enabled: false
+          subscribers:
+            opsgenie:
+              protocol: "https"
+              endpoint: "https://api.example.com/v1/"
+              endpoint_auto_confirms: true
+  ```
+
+  <!-- prettier-ignore-start -->
+
+  <!-- prettier-ignore-end -->
+
+  ## References
+
+  - [cloudposse/terraform-aws-components](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/sns-topic) -
+    Cloud Posse's upstream component
 include:
   - "docs/terraform.md"
-
 tags:
-  - terraform
-  - terraform-modules
-  - aws
-  - components
-  - terraform-components
-  - root
-  - geodesic
-  - reference-implementation
-  - reference-architecture
-
+  - component/sns-topic
+  - layer/addons
+  - provider/aws
 # Categories of this project
 categories:
-  - terraform-modules/root
-  - terraform-components
-
+  - component/sns-topic
+  - layer/addons
+  - provider/aws
 # License of this project
 license: "APACHE2"
-
 # Badges to display
 badges:
-  - name: "Latest Release"
-    image: "https://img.shields.io/github/release/cloudposse-terraform-components/template.svg?style=for-the-badge"
-    url: "https://github.com/cloudposse-terraform-components/template/releases/latest"
-  - name: "Slack Community"
-    image: "https://slack.cloudposse.com/for-the-badge.svg"
-    url: "https://slack.cloudposse.com"
-
-references:
-  - name: "Cloud Posse Documentation"
-    description: "Complete documentation for the Cloud Posse solution"
-    url: "https://docs.cloudposse.com"
-  - name: "Reference Architectures"
-    description: "Launch effortlessly with our turnkey reference architectures, built either by your team or ours."
-    url: "https://cloudposse.com/"
-
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudposse-terraform-components/aws-sns-topic.svg?style=for-the-badge
+    url: https://github.com/cloudposse-terraform-components/aws-sns-topic/releases/latest
+  - name: Slack Community
+    image: https://slack.cloudposse.com/for-the-badge.svg
+    url: https://slack.cloudposse.com
 related:
-- name: "Cloud Posse Terraform Modules"
-  description: Our collection of reusable Terraform modules used by our reference architectures.
-  url: "https://docs.cloudposse.com/modules/"
-- name: "Atmos"
-  description: "Atmos is like docker-compose but for your infrastructure"
-  url: "https://atmos.tools"
-
+  - name: "Cloud Posse Terraform Modules"
+    description: Our collection of reusable Terraform modules used by our reference architectures.
+    url: "https://docs.cloudposse.com/modules/"
+  - name: "Atmos"
+    description: "Atmos is like docker-compose but for your infrastructure"
+    url: "https://atmos.tools"
 contributors: [] # If included generates contribs
