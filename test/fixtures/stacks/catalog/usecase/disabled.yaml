@@ -4,7 +4,7 @@ components:
       metadata:
         component: target
       vars:
-        enabled: true
+        enabled: false
         tags:
           Team: sre
           Service: sns-topic
