@@ -1,6 +1,6 @@
 components:
   terraform:
-    sns-topic/basic:
+    sns-topic/disabled:
       metadata:
         component: target
       vars:

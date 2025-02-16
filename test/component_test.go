@@ -1,13 +1,14 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/cloudposse/test-helpers/pkg/atmos"
-	helper "github.com/cloudposse/test-helpers/pkg/atmos/aws-component-helper"
+	helper "github.com/cloudposse/test-helpers/pkg/atmos/component-helper"
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/stretchr/testify/assert"
 )
@@ -47,77 +48,72 @@ type SnsTopic struct {
 	TracingConfig                        string                 `json:"tracing_config"`
 }
 
-func TestComponent(t *testing.T) {
-	awsRegion := "us-east-2"
+type ComponentSuite struct {
+	helper.TestSuite
+}
 
-	fixture := helper.NewFixture(t, "../", awsRegion, "test/fixtures")
+func (s *ComponentSuite) TestBasic() {
+	const component = "sns-topic/basic"
+	const stack = "default-test"
+	const awsRegion = "us-east-2"
 
-	defer fixture.TearDown()
-	fixture.SetUp(&atmos.Options{})
+	defer s.DestroyAtmosComponent(s.T(), component, stack, nil)
+	options, _ := s.DeployAtmosComponent(s.T(), component, stack, nil)
+	assert.NotNil(s.T(), options)
 
-	fixture.Suite("default", func(t *testing.T, suite *helper.Suite) {
-		suite.Test(t, "basic", func(t *testing.T, atm *helper.Atmos) {
-			inputs := map[string]interface{}{}
+	var snsTopic SnsTopic
+	atmos.OutputStruct(s.T(), options, "sns_topic_name", &snsTopic)
 
-			defer atm.GetAndDestroy("sns-topic/basic", "default-test", inputs)
-			component := atm.GetAndDeploy("sns-topic/basic", "default-test", inputs)
-			assert.NotNil(t, component)
+	snsTopicId := atmos.Output(s.T(), options, "sns_topic_id")
+	assert.Equal(s.T(), snsTopic.Name, snsTopicId)
 
-			var snsTopic SnsTopic
+	snsTopicOwner := atmos.Output(s.T(), options, "sns_topic_owner")
+	assert.Equal(s.T(), snsTopic.Owner, snsTopicOwner)
 
-			atm.OutputStruct(component, "sns_topic_name", &snsTopic)
+	snsTopicArn := atmos.Output(s.T(), options, "sns_topic_arn")
+	assert.Equal(s.T(), fmt.Sprintf("arn:aws:sns:%s:%s:%s", awsRegion, snsTopicOwner, snsTopicId), snsTopicArn)
+	assert.Equal(s.T(), snsTopic.Arn, snsTopicArn)
 
-			snsTopicId := atm.Output(component, "sns_topic_id")
-			assert.Equal(t, snsTopic.Name, snsTopicId)
+	snsTopicSubscriptions := atmos.OutputMapOfObjects(s.T(), options, "sns_topic_subscriptions")
+	assert.NotNil(s.T(), snsTopicSubscriptions)
 
-			snsTopicOwner := atm.Output(component, "sns_topic_owner")
-			assert.Equal(t, snsTopic.Owner, snsTopicOwner)
+	client := aws.NewSnsClient(s.T(), awsRegion)
 
-			snsTopicArn := atm.Output(component, "sns_topic_arn")
-			assert.Equal(t, fmt.Sprintf("arn:aws:sns:%s:%s:%s", awsRegion, snsTopicOwner, snsTopicId), snsTopicArn)
-			assert.Equal(t, snsTopic.Arn, snsTopicArn)
-
-			snsTopicSubscriptions := atm.OutputMapOfObjects(component, "sns_topic_subscriptions")
-			assert.NotNil(t, snsTopicSubscriptions)
-
-			client := aws.NewSnsClient(t, awsRegion)
-
-			topicAttributes, err := client.GetTopicAttributes(&sns.GetTopicAttributesInput{
-				TopicArn: &snsTopicArn,
-			})
-			assert.NoError(t, err)
-			assert.NotNil(t, topicAttributes)
-
-			// You can add assertions for specific attributes if needed
-			assert.Equal(t, snsTopic.Name, *topicAttributes.Attributes["DisplayName"])
-			assert.Equal(t, snsTopic.Owner, *topicAttributes.Attributes["Owner"])
-			assert.Equal(t, snsTopic.Arn, *topicAttributes.Attributes["TopicArn"])
-			assert.Equal(t, snsTopic.DisplayName, *topicAttributes.Attributes["DisplayName"])
-
-			applicationSuccessFeedbackSampleRate, err := strconv.Atoi(*topicAttributes.Attributes["ApplicationSuccessFeedbackSampleRate"])
-			assert.NoError(t, err)
-			assert.Equal(t, snsTopic.ApplicationSuccessFeedbackSampleRate, applicationSuccessFeedbackSampleRate)
-
-			firehoseSuccessFeedbackSampleRate, err := strconv.Atoi(*topicAttributes.Attributes["FirehoseSuccessFeedbackSampleRate"])
-			assert.NoError(t, err)
-			assert.Equal(t, snsTopic.FirehoseSuccessFeedbackSampleRate, firehoseSuccessFeedbackSampleRate)
-
-			lambdaSuccessFeedbackSampleRate, err := strconv.Atoi(*topicAttributes.Attributes["LambdaSuccessFeedbackSampleRate"])
-			assert.NoError(t, err)
-			assert.Equal(t, snsTopic.LambdaSuccessFeedbackSampleRate, lambdaSuccessFeedbackSampleRate)
-
-			// deadLetterQueueUrl := atm.Output(component, "dead_letter_queue_url")
-			// assert.Equal(t, deadLetterQueueUrl, "")
-
-			// deadLetterQueueId := atm.Output(component, "dead_letter_queue_id")
-			// assert.Equal(t, deadLetterQueueId, "")
-
-			// deadLetterQueueName := atm.Output(component, "dead_letter_queue_name")
-			// assert.Equal(t, deadLetterQueueName, "")
-
-			// deadLetterQueueArn := atm.Output(component, "dead_letter_queue_arn")
-			// assert.Equal(t, deadLetterQueueArn, "")
-		})
-
+	topicAttributes, err := client.GetTopicAttributes(context.Background(), &sns.GetTopicAttributesInput{
+		TopicArn: &snsTopicArn,
 	})
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), topicAttributes)
+
+	assert.Equal(s.T(), snsTopic.Name, topicAttributes.Attributes["DisplayName"])
+	assert.Equal(s.T(), snsTopic.Owner, topicAttributes.Attributes["Owner"])
+	assert.Equal(s.T(), snsTopic.Arn, topicAttributes.Attributes["TopicArn"])
+	assert.Equal(s.T(), snsTopic.DisplayName, topicAttributes.Attributes["DisplayName"])
+
+	applicationSuccessFeedbackSampleRate, err := strconv.Atoi(topicAttributes.Attributes["ApplicationSuccessFeedbackSampleRate"])
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), snsTopic.ApplicationSuccessFeedbackSampleRate, applicationSuccessFeedbackSampleRate)
+
+	firehoseSuccessFeedbackSampleRate, err := strconv.Atoi(topicAttributes.Attributes["FirehoseSuccessFeedbackSampleRate"])
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), snsTopic.FirehoseSuccessFeedbackSampleRate, firehoseSuccessFeedbackSampleRate)
+
+	lambdaSuccessFeedbackSampleRate, err := strconv.Atoi(topicAttributes.Attributes["LambdaSuccessFeedbackSampleRate"])
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), snsTopic.LambdaSuccessFeedbackSampleRate, lambdaSuccessFeedbackSampleRate)
+
+	s.DriftTest(component, stack, nil)
+}
+
+func (s *ComponentSuite) TestEnabledFlag() {
+	const component = "sns-topic/disabled"
+	const stack = "default-test"
+	const awsRegion = "us-east-2"
+
+	s.VerifyEnabledFlag(component, stack, nil)
+}
+
+func TestRunSuite(t *testing.T) {
+	suite := new(ComponentSuite)
+	helper.Run(t, suite)
 }
