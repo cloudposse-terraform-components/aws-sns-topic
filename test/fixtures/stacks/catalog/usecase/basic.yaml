@@ -1,0 +1,27 @@
+components:
+  terraform:
+    sns-topic/basic:
+      metadata:
+        component: target
+      vars:
+        enabled: true
+        tags:
+          Team: sre
+          Service: sns-topic
+        subscribers: {}
+        allowed_aws_services_for_sns_published: []
+        kms_master_key_id: alias/aws/sns
+        encryption_enabled: true
+        sqs_queue_kms_master_key_id: alias/aws/sqs
+        sqs_queue_kms_data_key_reuse_period_seconds: 300
+        allowed_iam_arns_for_sns_publish: []
+        sns_topic_policy_json: ""
+        sqs_dlq_enabled: false
+        sqs_dlq_max_message_size: 262144
+        sqs_dlq_message_retention_seconds: 1209600
+        delivery_policy: null
+        fifo_topic: false
+        fifo_queue_enabled: false
+        content_based_deduplication: false
+        redrive_policy_max_receiver_count: 5
+        redrive_policy: null
