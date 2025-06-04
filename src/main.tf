@@ -4,7 +4,7 @@ locals {
 
 module "sns_topic" {
   source  = "cloudposse/sns-topic/aws"
-  version = "0.20.1"
+  version = "0.21.0"
 
   subscribers = var.subscribers
 
