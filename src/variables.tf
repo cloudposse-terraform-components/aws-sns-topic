@@ -14,7 +14,7 @@ variable "subscribers" {
     raw_message_delivery = optional(bool)
     # Boolean indicating whether or not to enable raw message delivery (the original message is directly passed, not wrapped in JSON with the original message in the message property) (default is false)
   }))
-  description = "Required configuration for subscibres to SNS topic."
+  description = "Required configuration for subscribes to SNS topic."
   default     = {}
 }
 
